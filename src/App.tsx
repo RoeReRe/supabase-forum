@@ -5,6 +5,8 @@ import PostView from './PostView'
 import MessageBoard from './MessageBoard'
 import Welcome from './Welcome'
 import NavBar from './NavBar'
+import { SupabaseUserInfo, useSession } from './use-session'
+import { createContext } from 'react'
 
 const router = createBrowserRouter([
   {
@@ -37,11 +39,22 @@ function App() {
   return <RouterProvider router={router} />;
 }
 
-export default App
+export default App;
+
+export const UserContext = createContext<SupabaseUserInfo>({
+  session: null,
+  profile: null,
+});
 
 function Layout() {
-  return <>
-    <NavBar />
-    <Outlet />
+  const supabaseUserInfo = useSession();
+  
+  return (
+  <>    
+    <UserContext.Provider value={supabaseUserInfo}>
+      <NavBar />
+      <Outlet />
+    </UserContext.Provider>
   </>
+  );
 }

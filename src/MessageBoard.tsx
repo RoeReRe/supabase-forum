@@ -1,12 +1,27 @@
 import { Link, Outlet } from "react-router-dom";
+import { UserContext } from "./App";
+import { useContext } from "react";
+import Login from "./Login";
 
 export default function MessageBoard() {
-    return (
-      <div className="message-board-container">
-        <Link to="/1">
-          <h2 className="message-board-header-link">Message Board</h2>
-        </Link>
-        <Outlet />
-      </div>
-    );
-  }
+  const userProfile = useContext(UserContext);
+
+  return (
+    <div className="message-board-container">
+      <Link to="/1">
+        <h2 className="message-board-header-link">Message Board</h2>
+      </Link>
+      {userProfile.session ? (
+        <></>
+      ) : (
+        <h2
+          className="message-board-login-message"
+          data-e2e="message-board-login"
+        >
+          Please <Login /> to join the forum!
+        </h2>
+      )}
+      <Outlet />
+    </div>
+  );
+}

@@ -460,7 +460,7 @@
     react "^18.2.0"
     react-dom "^18.2.0"
 
-"@supabase/auth-ui-shared@0.1.7":
+"@supabase/auth-ui-shared@0.1.7", "@supabase/auth-ui-shared@^0.1.7":
   version "0.1.7"
   resolved "https://registry.yarnpkg.com/@supabase/auth-ui-shared/-/auth-ui-shared-0.1.7.tgz#63165e8f26bcf8d12b2f9f05106a12439a39b204"
   integrity sha512-ueqyfCHVYX/ioehwL1ErH0+cZwiSzsIfZfhf326yJdDI0XExTKPV4lxPtWT1xx6c8A4FPPmT3kJKQaWs27pxCw==

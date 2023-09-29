@@ -32,7 +32,11 @@ module.exports = {
       yellow: colors.yellow,
       gray: colors.gray,
     },
-  extend: {},
-  plugins: [],
+    extend: {
+      width: {
+        128: "32rem",
+      }
+    },
+    plugins: [],
   }
 }
