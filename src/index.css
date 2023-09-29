@@ -1,3 +1,74 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html {
+    display: block;
+    font-size: 13px;
+    @media (min-width: 1024px) {
+        font-size: 16px;
+    }
+}
+
+body {
+    @apply bg-gray-700 text-gray-100;
+    background: linear-gradient(
+        176deg,
+        rgba(18, 24, 27, 1) 50%,
+        rgba(32, 39, 55, 1) 100%
+    );
+    min-height: 100vh;
+    background-attachment: fixed;
+    margin: 0 auto;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    @apply font-display font-normal text-white text-2xl;
+}
+
+p {
+    @apply font-display font-normal text-white;
+}
+
+svg {
+    width: auto;
+}
+
+/* Navigation bar */
+.nav-bar {
+    @apply flex justify-between max-w-screen-2xl mx-auto px-3 md:px-8 p-6 md:p-8 text-gray1 w-full;
+}
+  
+.nav-logo-link {
+    @apply flex justify-center items-center text-center invisible md:visible;
+}
+
+.nav-logo {
+    @apply hover:scale-125 transition hover:drop-shadow-[0_0_9px_rgba(50,187,255,0.9)] w-0 md:w-64 mt-4;
+}
+
+.nav-right-list {
+    @apply flex justify-center items-center;
+}
+
+.nav-message-board-list-item {
+    @apply mx-2 md:mx-4 hover:scale-105 transition-transform;
+}
+
+.nav-message-board-link {
+    @apply font-sans text-xl font-bold leading-none text-gray2;
+}
+
+/* Message Board */
+.message-board-container {
+    @apply flex flex-col place-content-center w-full;
+}
+  
+.message-board-header-link {
+    @apply text-5xl text-center mb-1;
+}
