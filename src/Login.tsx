@@ -5,6 +5,11 @@ import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supaClient } from "./supa-client";
 
 export const setReturnPath = () => {
+    // if (window.location.pathname == "/") {
+    //     window.localStorage.setItem("returnPath", "/1");
+    //     return;
+    // }
+    
     window.localStorage.setItem("returnPath", window.location.pathname);
 }
 

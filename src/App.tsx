@@ -1,7 +1,7 @@
 import './App.css'
 import { Outlet, RouterProvider, createBrowserRouter } from 'react-router-dom'
 import AllPosts from './AllPosts'
-import PostView from './PostView'
+import { PostView } from './Post'
 import MessageBoard from './MessageBoard'
 import Welcome, { welcomeLoader } from './Welcome'
 import NavBar from './NavBar'
