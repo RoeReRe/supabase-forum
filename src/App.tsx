@@ -3,7 +3,7 @@ import { Outlet, RouterProvider, createBrowserRouter } from 'react-router-dom'
 import AllPosts from './AllPosts'
 import PostView from './PostView'
 import MessageBoard from './MessageBoard'
-import Welcome from './Welcome'
+import Welcome, { welcomeLoader } from './Welcome'
 import NavBar from './NavBar'
 import { SupabaseUserInfo, useSession } from './use-session'
 import { createContext } from 'react'
@@ -30,6 +30,7 @@ const router = createBrowserRouter([
       {
         path: "Welcome",
         element: <Welcome />,
+        loader: welcomeLoader,
       },
     ],
   },

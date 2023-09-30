@@ -31,7 +31,7 @@ test.describe("User auth", () => {
     await signUp(page, userEmail, userPassword, userName);
     const newTab = await context.newPage();
     await newTab.goto("http://localhost:1337");
-    const logoutButton = newTab.locator("button", { hasText: "Logout" });
+    const logoutButton = newTab.locator("button", { hasText: "Sign out" });
     await expect(logoutButton).toHaveCount(1);
   });
 
@@ -41,7 +41,7 @@ test.describe("User auth", () => {
     await signUp(page, userEmail, userPassword, userName, true);
     await page.goto("http://localhost:1337");
     const welcomeNotice = page.locator("h2", {
-      hasText: "Welcome to Supaship!",
+      hasText: "Welcome to the forum!!",
     });
     await expect(welcomeNotice).toHaveCount(1);
   });
@@ -52,10 +52,10 @@ test.describe("User auth", () => {
     await signUp(page, userEmail, userPassword, userName);
     await page.goto("http://localhost:1337/welcome");
     const welcomeNotice = page.locator("h2", {
-      hasText: "Welcome to Supaship!",
+      hasText: "Welcome to the forum!!",
     });
     await expect(welcomeNotice).toHaveCount(0);
-    const logoutButton = page.locator("button", { hasText: "Logout" });
+    const logoutButton = page.locator("button", { hasText: "Sign out" });
     await expect(logoutButton).toHaveCount(1);
   });
 
@@ -68,7 +68,7 @@ test.describe("User auth", () => {
       timeout: 2000,
     });
     const welcomeNotice = page.locator("h2", {
-      hasText: "Welcome to Supaship!",
+      hasText: "Welcome to the forum!!",
     });
     await expect(welcomeNotice).toHaveCount(0);
   });
@@ -86,7 +86,7 @@ test.describe("User auth", () => {
       await expect(submitButton).toBeDisabled();
       await page.keyboard.press("Enter");
       const welcomeHeader = page.locator("h2", {
-        hasText: "Welcome to Supaship!",
+        hasText: "Welcome to the forum!!",
       });
       await expect(welcomeHeader).toHaveCount(1);
     });
@@ -99,7 +99,7 @@ test.describe("User auth", () => {
       await expect(submitButton).toBeDisabled();
       await page.keyboard.press("Enter");
       const welcomeHeader = page.locator("h2", {
-        hasText: "Welcome to Supaship!",
+        hasText: "Welcome to the forum!!",
       });
       await expect(welcomeHeader).toHaveCount(1);
       await expect(validation).toHaveText(
@@ -116,7 +116,7 @@ test.describe("User auth", () => {
       await expect(submitButton).toBeDisabled();
       await page.keyboard.press("Enter");
       const welcomeHeader = page.locator("h2", {
-        hasText: "Welcome to Supaship!",
+        hasText: "Welcome to the forum!!",
       });
       await expect(welcomeHeader).toHaveCount(1);
       await expect(validation).toHaveText(
@@ -134,7 +134,7 @@ test.describe("User auth", () => {
       await expect(submitButton).toBeDisabled();
       await page.keyboard.press("Enter");
       const welcomeHeader = page.locator("h2", {
-        hasText: "Welcome to Supaship!",
+        hasText: "Welcome to the forum!!",
       });
       await expect(welcomeHeader).toHaveCount(1);
       await expect(validation).toHaveText(
@@ -145,7 +145,7 @@ test.describe("User auth", () => {
 
   test("it should not allow duplicate usernames", async ({ page }) => {
     await signUp(page, userEmail, userPassword, userName);
-    const logoutButton = page.locator("button", { hasText: "Logout" });
+    const logoutButton = page.locator("button", { hasText: "Sign out" });
     await logoutButton.click();
     const signInButton = page.locator("button", { hasText: "Login" });
     await expect(signInButton).toHaveCount(2);
@@ -158,7 +158,7 @@ test.describe("User auth", () => {
     await expect(submitButton).toBeEnabled();
     await page.keyboard.press("Enter");
     const welcomeHeader = page.locator("h2", {
-      hasText: "Welcome to Supaship!",
+      hasText: "Welcome to the forum!!",
     });
     await expect(welcomeHeader).toHaveCount(1);
     await expect(validation).toHaveText(`Username "testuser" is already taken`);

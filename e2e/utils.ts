@@ -13,12 +13,12 @@ async function startSupabase() {
     return;
   }
   console.warn("Supabase not detected - Starting it now");
-  execSync("npx supabase start");
+  execSync("yarn run supabase start");
 }
 
 function reseedDb() {
   execSync(
-    "PGPASSWORD=postgres psql -U postgres -h 127.0.0.1 -p 64322 -f supabase/clear-db-data.sql",
+    "SET PGPASSWORD=postgres&&psql -U postgres -h 127.0.0.1 -p 54322 -f supabase/clear-db-data.sql",
     { stdio: "ignore" }
   );
 }
@@ -30,14 +30,14 @@ export async function signUp(
   userName: string,
   skipUserName = false
 ) {
-  const signUpButton = page.locator("button", { hasText: "Sign Up" }).first();
+  const signUpButton = page.locator("button", { hasText: "Sign up" }).first();
   await signUpButton.click();
   const emailInput = page.locator('input[name="email"]');
   await emailInput.fill(email);
   const passwordInput = page.locator('input[name="password"]');
   await passwordInput.fill(password);
   await page.keyboard.press("Enter");
-  const welcomeNotice = page.locator("h2", { hasText: "Welcome to Supaship!" });
+  const welcomeNotice = page.locator("h2", { hasText: "Welcome to the forum!!" });
   await expect(welcomeNotice).toHaveCount(1);
   if (skipUserName) {
     return;
@@ -47,7 +47,7 @@ export async function signUp(
   const submitButton = page.locator("button", { hasText: "Submit" });
   await expect(submitButton).toBeEnabled();
   await page.keyboard.press("Enter");
-  const logoutButton = page.locator("button", { hasText: "Logout" });
+  const logoutButton = page.locator("button", { hasText: "Sign out" });
   await expect(logoutButton).toHaveCount(1);
 }
 
@@ -66,9 +66,9 @@ export async function login(
   await emailInput.fill(email);
   const passwordInput = page.locator('input[name="password"]');
   await passwordInput.fill(password);
-  const signUpSubmitButton = page.locator("button.supabase-ui-auth_ui-button");
-  await signUpSubmitButton.nth(1).click();
-  const logoutButton = page.locator("button", { hasText: "Logout" });
+  const signUpSubmitButton = page.locator("button.supabase-auth-ui_ui-button", { hasText: "Sign in"});
+  await signUpSubmitButton.nth(2).click();
+  const logoutButton = page.locator("button", { hasText: "Sign out" });
   await expect(logoutButton).toHaveCount(1);
   const usernameMention = page.locator("h2", { hasText: username });
   await expect(usernameMention).toHaveCount(1);
