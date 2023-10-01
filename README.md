@@ -6,6 +6,8 @@ Users are able to post, comment and upvote other posts.
 
 The data is stored in a dedicated PostgreSQL database.
 
+![image](https://github.com/RoeReRe/supabase-forum/assets/119654395/c5da230d-77e3-4f30-83b2-e097c6a5f83d)
+
 ## Features
 
 ### Login / Sign up
