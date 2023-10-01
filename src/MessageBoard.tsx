@@ -1,17 +1,27 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { UserContext } from "./App";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Login from "./Login";
 
 export default function MessageBoard() {
   const userProfile = useContext(UserContext);
+  const location = useLocation();
+  const [homeState, setHomeState] = useState(window.location.pathname == "/");
   
+  useEffect(() => {
+    if (location.pathname == "/") {
+      setHomeState(true);
+    } else {
+      setHomeState(false);
+    }
+  }, [location]);
+
   return (
     <div className="message-board-container">
       {userProfile.session ? (
         <div>
           <h2 className="message-board-header-link">Message Board</h2>
-          < IntroMessage />
+          {homeState ? < IntroMessage /> : <></>}
         </div>
       ) : (
         <div>
