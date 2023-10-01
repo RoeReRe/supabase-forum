@@ -59,6 +59,7 @@ export default function Welcome() {
                     // For now the only error should be this
                     setServerError(`Username "${userName}" is already taken`);
                   } else {
+                    user.profile = { username: userName };
                     const target = window.localStorage.getItem("returnPath") || "/";
                     window.localStorage.removeItem("returnPath");
                     navigate(target);
