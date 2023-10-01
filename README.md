@@ -1,6 +1,6 @@
 # Message Board Forum
 
-This project is an online forum designed with a UI similar to Reddit.
+This project is an online forum designed with a UI similar to Reddit. The forum can be accessed [here](https://roereresupabaseforum.netlify.app/).
 
 Users are able to post, comment and upvote other posts.
 
