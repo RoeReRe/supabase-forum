@@ -6,18 +6,16 @@ const supabaseKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
 
 // Custom fetch that ensures apikey header and fixes columns parameter
 const customFetch = async (url: string, options: RequestInit = {}) => {
-  // Fix: Remove ALL double quotes from columns parameter
-  // Input:  "user_id","username"
-  // Output: user_id,username
   const urlObj = new URL(url);
+
+  // Fix columns parameter: remove ALL double quotes
   if (urlObj.searchParams.has('columns')) {
     const columns = urlObj.searchParams.get('columns');
-    urlObj.searchParams.set('columns', columns?.replace(/"/g, '')  || '');
-    urlObj.searchParams.set('columns', columns?.replace(/"/g, '') || '');
+    urlObj.searchParams.set('columns', columns?.split('"').join('') || '');
     url = urlObj.toString();
   }
 
-  // Ensure apikey header is ALWAYS present (fixes 401 "No API key found")
+  // Ensure apikey header is ALWAYS present
   const headers = {
     ...options.headers,
     apikey: supabaseKey,
