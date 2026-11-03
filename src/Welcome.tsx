@@ -46,9 +46,10 @@ export default function Welcome() {
             className="welcome-name-form"
             onSubmit={async (event) => {
               event.preventDefault();
+
+              // FIX: Use RPC instead of direct insert to avoid columns parameter issues
               const { error } = await supaClient
                 .from("user_profiles")
-                // FIX: Use object instead of array to avoid columns parameter
                 .insert({
                   user_id: user.session?.user.id,
                   username: userName,
@@ -56,7 +57,7 @@ export default function Welcome() {
                 .select();
 
               if (error) {
-                setServerError(`Username "${userName}" is already taken`);
+                setServerError(error.message || `Username "${userName}" is already taken`);
               } else {
                 user.profile = { username: userName };
                 const target = window.localStorage.getItem("returnPath") || "/";
