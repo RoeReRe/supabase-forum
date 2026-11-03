@@ -22,6 +22,13 @@ const customFetch = async (url: string, options: RequestInit = {}) => {
 
 export const supaClient = createClient<Database>(supabaseUrl, supabaseKey, {
   global: {
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`,
+    },
     fetch: customFetch,
+  },
+  db: {
+    schema: "public",
   },
 });
