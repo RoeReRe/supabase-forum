@@ -47,7 +47,7 @@ export default function Welcome() {
             onSubmit={async (event) => {
               event.preventDefault();
 
-              // FIX: Use object insert without .select()
+              // CORRECT: Use insert with object, NO .select()
               const { error } = await supaClient
                 .from("user_profiles")
                 .insert({
