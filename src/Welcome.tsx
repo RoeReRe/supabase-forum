@@ -6,17 +6,17 @@ import { supaClient } from "./supa-client";
 
 export async function welcomeLoader() {
   const { data: { user } } = await supaClient.auth.getUser();
-  
+
   if (!user) {
     return redirect("/");
   }
-  
+
   const { data } = await supaClient
     .from("user_profiles")
     .select("*")
     .eq("user_id", user?.id)
     .single();
-  
+
   if (data?.username) {
     return redirect("/");
   }
@@ -44,27 +44,25 @@ export default function Welcome() {
           </p>
           <form
             className="welcome-name-form"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
-              supaClient
+
+              // CORRECT: Use insert with object, NO .select()
+              const { error } = await supaClient
                 .from("user_profiles")
-                .insert([
-                  {
-                    user_id: user.session?.user.id || "",
-                    username: userName,
-                  },
-                ])
-                .then(({ error }) => {
-                  if (error) {
-                    // For now the only error should be this
-                    setServerError(`Username "${userName}" is already taken`);
-                  } else {
-                    user.profile = { username: userName };
-                    const target = window.localStorage.getItem("returnPath") || "/";
-                    window.localStorage.removeItem("returnPath");
-                    navigate(target);
-                  }
+                .insert({
+                  user_id: user.session?.user.id,
+                  username: userName,
                 });
+
+              if (error) {
+                setServerError(error.message || `Username "${userName}" is already taken`);
+              } else {
+                user.profile = { username: userName };
+                const target = window.localStorage.getItem("returnPath") || "/";
+                window.localStorage.removeItem("returnPath");
+                navigate(target);
+              }
             }}
           >
             <input
@@ -101,6 +99,7 @@ export default function Welcome() {
       }
     />
   );
+
 }
 
 /**

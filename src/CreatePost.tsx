@@ -17,7 +17,8 @@ function createNewPost({
   content: string;
 }) {
   return supaClient.rpc("create_new_post", {
-    userId: session?.user.id || "",
+    // FIX: Use lowercase 'userid' to match database function parameter
+    userid: session?.user.id,
     title,
     content,
   });
@@ -29,6 +30,7 @@ export function CreatePost({ newPostCreated = () => {} }: CreatePostProps) {
   const [content, setContent] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
   const contentInputRef = useRef<HTMLTextAreaElement>(null);
+
   return (
     <>
       <form
