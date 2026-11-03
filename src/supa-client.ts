@@ -6,13 +6,11 @@ const supabaseKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
 
 // Custom fetch that ensures apikey header and fixes columns parameter
 const customFetch = async (url: string, options: RequestInit = {}) => {
-  // Fix: Remove ALL double quotes from columns parameter
-  // Input:  columns="user_id","username"
-  // Output: columns=user_id,username
   const urlObj = new URL(url);
+
+  // Fix columns parameter: remove ALL double quotes
   if (urlObj.searchParams.has('columns')) {
     const columns = urlObj.searchParams.get('columns');
-    // Use split/join instead of regex to avoid escaping issues
     urlObj.searchParams.set('columns', columns?.split('"').join('') || '');
     url = urlObj.toString();
   }
