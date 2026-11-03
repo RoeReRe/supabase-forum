@@ -7,9 +7,6 @@ import Welcome, { welcomeLoader } from './Welcome'
 import NavBar from './NavBar'
 import { SupabaseUserInfo, useSession } from './use-session'
 import { createContext } from 'react'
-console.log("debug")
-console.log("Supabase URL:", import.meta.env.VITE_SUPABASE_API_URL);
-console.log("Supabase Key:", import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 const router = createBrowserRouter([
   {
