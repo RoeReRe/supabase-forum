@@ -47,14 +47,13 @@ export default function Welcome() {
             onSubmit={async (event) => {
               event.preventDefault();
 
-              // FIX: Use RPC instead of direct insert to avoid columns parameter issues
+              // FIX: Use object insert without .select()
               const { error } = await supaClient
                 .from("user_profiles")
                 .insert({
                   user_id: user.session?.user.id,
                   username: userName,
-                })
-                .select();
+                });
 
               if (error) {
                 setServerError(error.message || `Username "${userName}" is already taken`);
