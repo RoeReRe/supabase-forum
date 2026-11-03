@@ -10,7 +10,7 @@ const customFetch = async (url: string, options: RequestInit = {}) => {
   const urlObj = new URL(url);
   if (urlObj.searchParams.has('columns')) {
     const columns = urlObj.searchParams.get('columns');
-    urlObj.searchParams.set('columns', columns?.replace(/""/g, '') || '');
+    urlObj.searchParams.set('columns', columns?.replace(/"/g, '')  || '');
     url = urlObj.toString();
   }
 
