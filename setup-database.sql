@@ -1,242 +1,283 @@
--- DarkDuck Forum Database Setup
--- Run this entire file in Supabase SQL Editor
+-- ============================================
+-- DARK DUCK FORUM - COMPLETE DATABASE SETUP
+-- Run this entire script in Supabase SQL Editor
+-- ============================================
 
 -- Enable ltree extension for hierarchical paths
 CREATE EXTENSION IF NOT EXISTS ltree;
 
--- User profiles table
+-- ============================================
+-- TABLES
+-- ============================================
+
+-- User profiles
 CREATE TABLE IF NOT EXISTS user_profiles (
-  user_id uuid PRIMARY KEY REFERENCES auth.users (id) NOT NULL,
-  username text UNIQUE NOT NULL,
-  CONSTRAINT proper_username CHECK (username ~* '^[a-zA-Z0-9_]+$'),
-  CONSTRAINT username_length CHECK (char_length(username) > 3 AND char_length(username) < 15)
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  username TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Posts table (hierarchical with ltree)
+-- Posts (hierarchical structure)
 CREATE TABLE IF NOT EXISTS posts (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4() NOT NULL,
-  user_id uuid REFERENCES auth.users (id) NOT NULL,
-  created_at timestamp WITH TIME ZONE DEFAULT now() NOT NULL,
-  path ltree NOT NULL
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  path ltree NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Post score tracking
-CREATE TABLE IF NOT EXISTS post_score (
-  post_id uuid PRIMARY KEY REFERENCES posts (id) NOT NULL,
-  score int NOT NULL
-);
-
--- Post content (title, body)
+-- Post contents
 CREATE TABLE IF NOT EXISTS post_contents (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4() NOT NULL,
-  user_id uuid REFERENCES auth.users (id) NOT NULL,
-  post_id uuid REFERENCES posts (id) NOT NULL,
-  title text,
-  content text,
-  created_at timestamp WITH TIME ZONE DEFAULT now() NOT NULL
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  content TEXT,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- User votes on posts
+-- Post score
+CREATE TABLE IF NOT EXISTS post_score (
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  score integer NOT NULL DEFAULT 0,
+  PRIMARY KEY (post_id)
+);
+
+-- Post votes
 CREATE TABLE IF NOT EXISTS post_votes (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4() NOT NULL,
-  post_id uuid REFERENCES posts (id) NOT NULL,
-  user_id uuid REFERENCES auth.users (id) NOT NULL,
-  vote_type text NOT NULL,
-  UNIQUE (post_id, user_id)
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  vote_type TEXT NOT NULL CHECK (vote_type IN ('up', 'down')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(post_id, user_id)
 );
 
--- Function: Auto-update post score when votes change
-CREATE OR REPLACE FUNCTION update_post_score()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $update_post_score$
-BEGIN
-  UPDATE post_score
-  SET score = (
-    SELECT COALESCE(SUM(CASE WHEN vote_type = 'up' THEN 1 ELSE -1 END), 0)
-    FROM post_votes
-    WHERE post_id = NEW.post_id
-  )
-  WHERE post_id = NEW.post_id;
-  RETURN NEW;
-END;$update_post_score$;
+-- ============================================
+-- ROW LEVEL SECURITY (RLS)
+-- ============================================
 
--- Trigger for vote changes
-DROP TRIGGER IF EXISTS update_post_score_trigger ON post_votes;
-CREATE TRIGGER update_post_score
-  AFTER INSERT OR UPDATE OR DELETE
-  ON post_votes
-  FOR EACH ROW EXECUTE PROCEDURE update_post_score();
+-- User profiles
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
--- Function: Get posts with pagination
-CREATE OR REPLACE FUNCTION get_posts(page_number int)
+CREATE POLICY "Public read access to user_profiles"
+ON user_profiles FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert own profile"
+ON user_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own profile"
+ON user_profiles FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- Posts
+ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read access to posts"
+ON posts FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated users can create posts"
+ON posts FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Post contents
+ALTER TABLE post_contents ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read access to post_contents"
+ON post_contents FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated users can create post_contents"
+ON post_contents FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Post score
+ALTER TABLE post_score ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read access to post_score"
+ON post_score FOR SELECT USING (true);
+
+CREATE POLICY "Public can update post_score"
+ON post_score FOR UPDATE USING (true);
+
+-- Post votes
+ALTER TABLE post_votes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read access to post_votes"
+ON post_votes FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert own votes"
+ON post_votes FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own votes"
+ON post_votes FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- ============================================
+-- REALTIME CONFIGURATION
+-- ============================================
+
+-- Drop existing publication if it exists
+DROP PUBLICATION IF EXISTS supabase_realtime;
+
+-- Create new publication with all tables
+CREATE PUBLICATION supabase_realtime
+FOR TABLE
+  user_profiles, posts, post_contents, post_score, post_votes;
+
+-- Enable realtime on all tables
+ALTER TABLE user_profiles SET (realtime.enable = true);
+ALTER TABLE posts SET (realtime.enable = true);
+ALTER TABLE post_contents SET (realtime.enable = true);
+ALTER TABLE post_score SET (realtime.enable = true);
+ALTER TABLE post_votes SET (realtime.enable = true);
+
+-- ============================================
+-- RPC FUNCTIONS
+-- ============================================
+
+-- Get posts (paginated)
+CREATE OR REPLACE FUNCTION get_posts(page_number integer)
 RETURNS TABLE (
-  id uuid,
-  user_id uuid,
-  created_at timestamp WITH TIME ZONE,
-  title text,
-  score int,
-  username text
+  id UUID,
+  created_at TIMESTAMPTZ,
+  score integer,
+  title TEXT,
+  user_id UUID,
+  username TEXT
 )
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
-    posts.id, 
-    posts.user_id, 
-    posts.created_at, 
-    post_contents.title, 
-    post_score.score, 
-    user_profiles.username
-  FROM posts
-  JOIN post_contents ON posts.id = post_contents.post_id
-  JOIN post_score ON posts.id = post_score.post_id
-  JOIN user_profiles ON posts.user_id = user_profiles.user_id
-  WHERE posts.path ~ 'root'
-  ORDER BY post_score.score DESC, posts.created_at DESC
-  LIMIT 10
-  OFFSET (page_number - 1) * 10;
-END;$$;
+  SELECT
+    p.id,
+    p.created_at,
+    COALESCE(ps.score, 0) as score,
+    pc.title,
+    p.user_id,
+    up.username
+  FROM posts p
+  JOIN post_contents pc ON p.id = pc.post_id
+  LEFT JOIN post_score ps ON p.id = ps.post_id
+  LEFT JOIN user_profiles up ON p.user_id = up.user_id
+  ORDER BY ps.score DESC NULLS LAST, p.created_at DESC
+  LIMIT 25
+  OFFSET (page_number - 1) * 25;
+END;
+$$;
 
--- Function: Create new post
-CREATE OR REPLACE FUNCTION create_new_post("userId" uuid, "title" text, "content" text)
-RETURNS boolean
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  WITH inserted_post AS (
-    INSERT INTO posts (user_id, path)
-    VALUES ($1, 'root')
-    RETURNING id
-  )
-  INSERT INTO post_contents (post_id, title, content, user_id)
-  VALUES ((SELECT id FROM inserted_post), $2, $3, $1);
-  RETURN true;
-END; $$;
-
--- Function: Initialize post score on new post
-CREATE OR REPLACE FUNCTION initialize_post_score()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $initialize_post_score$
-BEGIN
-  INSERT INTO post_score (post_id, score)
-  VALUES (NEW.id, 0);
-  RETURN NEW;
-END;$initialize_post_score$;
-
--- Trigger for new posts
-DROP TRIGGER IF EXISTS initialize_post_score_trigger ON posts;
-CREATE TRIGGER initialize_post_score
-  AFTER INSERT
-  ON posts
-  FOR EACH ROW EXECUTE PROCEDURE initialize_post_score();
-
--- Function: Get single post with comments
-CREATE OR REPLACE FUNCTION get_single_post_with_comments(post_id uuid)
+-- Get single post with comments
+CREATE OR REPLACE FUNCTION get_single_post_with_comments(post_id UUID)
 RETURNS TABLE (
-  id uuid,
-  author_name text,
-  created_at timestamp WITH TIME ZONE,
-  title text,
-  content text,
-  score int,
+  id UUID,
+  created_at TIMESTAMPTZ,
+  score integer,
+  title TEXT,
+  content TEXT,
+  user_id UUID,
+  author_name TEXT,
   path ltree
 )
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
-    posts.id,
-    user_profiles.username,
-    posts.created_at,
-    post_contents.title,
-    post_contents.content,
-    post_score.score,
-    posts.path
-  FROM posts
-  JOIN post_contents ON posts.id = post_contents.post_id
-  JOIN post_score ON posts.id = post_score.post_id
-  JOIN user_profiles ON posts.user_id = user_profiles.user_id
-  WHERE posts.path <@ text2ltree(concat('root.', replace(concat($1, ''), '-', '_')))
-    OR posts.id = $1;
-END;$$;
-
--- Function: Create new comment
-CREATE OR REPLACE FUNCTION create_new_comment(user_id uuid, content text, path ltree)
-RETURNS boolean
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  WITH inserted_post AS (
-    INSERT INTO posts (user_id, path)
-    VALUES ($1, $3)
-    RETURNING id
+  WITH post_tree AS (
+    SELECT
+      p.id,
+      p.created_at,
+      COALESCE(ps.score, 0) as score,
+      pc.title,
+      pc.content,
+      p.user_id,
+      up.username as author_name,
+      p.path
+    FROM posts p
+    JOIN post_contents pc ON p.id = pc.post_id
+    LEFT JOIN post_score ps ON p.id = ps.post_id
+    LEFT JOIN user_profiles up ON p.user_id = up.user_id
+    WHERE p.path[0] = post_id::text
+    ORDER BY p.path
   )
+  SELECT * FROM post_tree;
+END;
+$$;
+
+-- Create new post
+CREATE OR REPLACE FUNCTION create_new_post(
+  userId UUID,
+  title TEXT,
+  content TEXT
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  new_post_id UUID;
+BEGIN
+  -- Create the post
+  INSERT INTO posts (user_id, path)
+  VALUES (userId, 'root.' || gen_random_uuid()::text)
+  RETURNING id INTO new_post_id;
+
+  -- Create the post content
   INSERT INTO post_contents (post_id, title, content, user_id)
-  VALUES ((SELECT id FROM inserted_post), '', $2, $1);
-  RETURN true;
-END; $$;
+  VALUES (new_post_id, title, content, userId);
 
--- Enable Row Level Security on all tables
-ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE post_contents ENABLE ROW LEVEL SECURITY;
-ALTER TABLE post_score ENABLE ROW LEVEL SECURITY;
-ALTER TABLE post_votes ENABLE ROW LEVEL SECURITY;
+  -- Initialize score
+  INSERT INTO post_score (post_id, score)
+  VALUES (new_post_id, 0)
+  ON CONFLICT (post_id) DO UPDATE SET score = 0;
 
--- RLS Policies for user_profiles
-CREATE POLICY "all can see profiles" ON user_profiles
-  AS PERMISSIVE FOR SELECT TO public USING (true);
+  RETURN new_post_id;
+END;
+$$;
 
-CREATE POLICY "users can insert profile" ON user_profiles
-  AS PERMISSIVE FOR INSERT TO public WITH CHECK (auth.uid() = user_id);
+-- Create new comment
+CREATE OR REPLACE FUNCTION create_new_comment(
+  user_id UUID,
+  content TEXT,
+  path ltree
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  new_comment_id UUID;
+BEGIN
+  -- Create the comment post
+  INSERT INTO posts (user_id, path)
+  VALUES (user_id, path)
+  RETURNING id INTO new_comment_id;
 
-CREATE POLICY "owners can update profile" ON user_profiles
-  AS PERMISSIVE FOR UPDATE TO public
-  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  -- Create the comment content
+  INSERT INTO post_contents (post_id, content, user_id)
+  VALUES (new_comment_id, content, user_id);
 
--- RLS Policies for posts
-CREATE POLICY "all can see posts" ON posts
-  AS PERMISSIVE FOR SELECT TO public USING (true);
+  -- Initialize score
+  INSERT INTO post_score (post_id, score)
+  VALUES (new_comment_id, 0)
+  ON CONFLICT (post_id) DO UPDATE SET score = 0;
 
-CREATE POLICY "owners can insert posts" ON posts
-  AS PERMISSIVE FOR INSERT TO public WITH CHECK (auth.uid() = user_id);
+  RETURN new_comment_id;
+END;
+$$;
 
--- RLS Policies for post_contents
-CREATE POLICY "all can see content" ON post_contents
-  AS PERMISSIVE FOR SELECT TO public USING (true);
+-- ============================================
+-- VERIFICATION
+-- ============================================
 
-CREATE POLICY "authors can create content" ON post_contents
-  AS PERMISSIVE FOR INSERT TO public WITH CHECK (auth.uid() = user_id);
+-- Check all tables exist
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN ('user_profiles', 'posts', 'post_contents', 'post_score', 'post_votes');
 
--- RLS Policies for post_score
-CREATE POLICY "all can see scores" ON post_score
-  AS PERMISSIVE FOR SELECT TO public USING (true);
+-- Check RLS is enabled
+SELECT table_name, row_security FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN ('user_profiles', 'posts', 'post_contents', 'post_score', 'post_votes');
 
--- RLS Policies for post_votes
-CREATE POLICY "all can see votes" ON post_votes
-  AS PERMISSIVE FOR SELECT TO public USING (true);
-
-CREATE POLICY "owners can insert vote" ON post_votes
-  AS PERMISSIVE FOR INSERT TO public WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "owners can update vote" ON post_votes
-  AS PERMISSIVE FOR UPDATE TO public
-  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
--- Real-time subscription for post_score
-BEGIN;
-DROP PUBLICATION IF EXISTS supabase_realtime CASCADE;
-CREATE PUBLICATION supabase_realtime WITH (publish = 'insert, update, delete');
-ALTER PUBLICATION supabase_realtime ADD TABLE post_score;
-COMMIT;
-
--- Success message
-SELECT '✅ Database setup complete!' AS message;
+-- Check realtime is enabled
+SELECT table_name, realtime.enable FROM pg_tables 
+WHERE schemaname = 'public' 
+AND tablename IN ('user_profiles', 'posts', 'post_contents', 'post_score', 'post_votes');
