@@ -6,17 +6,17 @@ import { supaClient } from "./supa-client";
 
 export async function welcomeLoader() {
   const { data: { user } } = await supaClient.auth.getUser();
-  
+
   if (!user) {
     return redirect("/");
   }
-  
+
   const { data } = await supaClient
     .from("user_profiles")
     .select("*")
     .eq("user_id", user?.id)
     .single();
-  
+
   if (data?.username) {
     return redirect("/");
   }
@@ -44,27 +44,25 @@ export default function Welcome() {
           </p>
           <form
             className="welcome-name-form"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
-              supaClient
+              const { error } = await supaClient
                 .from("user_profiles")
-                .insert([
-                  {
-                    user_id: user.session?.user.id,
-                    username: userName,
-                  },
-                ])
-                .then(({ error }) => {
-                  if (error) {
-                    // For now the only error should be this
-                    setServerError(`Username "${userName}" is already taken`);
-                  } else {
-                    user.profile = { username: userName };
-                    const target = window.localStorage.getItem("returnPath") || "/";
-                    window.localStorage.removeItem("returnPath");
-                    navigate(target);
-                  }
-                });
+                // FIX: Use object instead of array to avoid columns parameter
+                .insert({
+                  user_id: user.session?.user.id,
+                  username: userName,
+                })
+                .select();
+
+              if (error) {
+                setServerError(`Username "${userName}" is already taken`);
+              } else {
+                user.profile = { username: userName };
+                const target = window.localStorage.getItem("returnPath") || "/";
+                window.localStorage.removeItem("returnPath");
+                navigate(target);
+              }
             }}
           >
             <input
@@ -101,6 +99,7 @@ export default function Welcome() {
       }
     />
   );
+
 }
 
 /**
